@@ -61,7 +61,7 @@ export default defineDriver((opts: RedisOptions = {}) => {
     },
     async getItem(key) {
       let value = await getRedisClient().get(p(key));
-      return value !==null ? value: undefined;
+      return value !== null ? value : undefined;
     },
     async setItem(key, value, tOptions) {
       let ttl = tOptions?.ttl ?? opts.ttl;

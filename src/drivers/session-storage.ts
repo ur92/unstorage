@@ -29,7 +29,7 @@ export default defineDriver((opts: SessionStorageOptions = {}) => {
     },
     getItem(key) {
       let value = opts.sessionStorage.getItem(r(key));
-      return value !== null ? value: undefined;
+      return value !== null ? value : undefined;
     },
     setItem(key, value) {
       return opts.sessionStorage.setItem(r(key), value);

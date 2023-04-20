@@ -29,7 +29,7 @@ export default defineDriver((opts: LocalStorageOptions = {}) => {
     },
     getItem(key) {
       let value = opts.localStorage!.getItem(r(key));
-      return value !== null ? value: undefined;
+      return value !== null ? value : undefined;
     },
     setItem(key, value) {
       return opts.localStorage!.setItem(r(key), value);
