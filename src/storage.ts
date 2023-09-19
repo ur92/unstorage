@@ -26,7 +26,7 @@ export interface CreateStorageOptions {
 }
 
 export function createStorage(options: CreateStorageOptions = {}): Storage {
-  const eventEmitter = new EventEmitter();
+  const eventEmitter = options.driver?.eventEmitter ?? new EventEmitter();
 
   const context: StorageCTX = {
     mounts: { "": options.driver || memory() },

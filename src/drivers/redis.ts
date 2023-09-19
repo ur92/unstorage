@@ -5,6 +5,7 @@ import Redis, {
   ClusterOptions,
   RedisOptions as _RedisOptions,
 } from "ioredis";
+import { EventEmitter } from 'events';
 
 export interface RedisOptions extends _RedisOptions {
   /**
@@ -53,6 +54,28 @@ export default defineDriver((opts: RedisOptions = {}) => {
   const p = (key: string) => (base ? `${base}:${key}` : key); // Prefix a key. Uses base for backwards compatibility
   const d = (key: string) => (base ? key.replace(base, "") : key); // Deprefix a key
 
+  function exposeConnectionEvents() {
+    // TODO: Consider adding a layer prefix to event i.e: redis:connecting, redis:connection-error, redis:connection-closed
+    // TODO: Consider exposing a REDIS_EVENTS const
+    const eventEmitter = new EventEmitter();
+    // Connecting
+    redisClient?.on('connect', (e) => eventEmitter.emit('connect', e));
+    // Ready
+    redisClient?.on('ready', (e) => eventEmitter.emit('ready', e));
+    // Connection error
+    redisClient?.on('error', (e) => eventEmitter.emit('error', e));
+    // Connection closed
+    redisClient?.on('close', (e) => eventEmitter.emit('close', e));
+    // Reconnection
+    redisClient?.on('reconnecting', (e) => eventEmitter.emit('reconnecting', e));
+    // End
+    redisClient?.on('end', (e) => eventEmitter.emit('end', e));
+    // Wait
+    redisClient?.on('wait', (e) => eventEmitter.emit('wait', e));
+    return eventEmitter;
+  }
+
+  const eventEmitter = exposeConnectionEvents();
   return {
     name: "redis",
     options: opts,
@@ -90,5 +113,6 @@ export default defineDriver((opts: RedisOptions = {}) => {
     dispose() {
       return getRedisClient().disconnect();
     },
+    eventEmitter
   };
 });
