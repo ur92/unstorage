@@ -5,6 +5,7 @@ import Redis, {
   ClusterOptions,
   RedisOptions as _RedisOptions,
 } from "ioredis";
+import { EventEmitter } from 'events';
 
 export interface RedisOptions extends _RedisOptions {
   /**
@@ -35,6 +36,8 @@ export interface RedisOptions extends _RedisOptions {
 
 export default defineDriver((opts: RedisOptions = {}) => {
   let redisClient: Redis | Cluster;
+  const eventEmitter = new EventEmitter();
+
   const getRedisClient = () => {
     if (redisClient) {
       return redisClient;
@@ -90,5 +93,9 @@ export default defineDriver((opts: RedisOptions = {}) => {
     dispose() {
       return getRedisClient().disconnect();
     },
+    get client () {
+      return getRedisClient();
+    },
+    eventEmitter
   };
 });

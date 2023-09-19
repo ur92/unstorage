@@ -49,6 +49,8 @@ export interface Driver {
   clear?: (base?: string, opts?: TransactionOptions) => MaybePromise<void>;
   dispose?: () => MaybePromise<void>;
   watch?: (callback: WatchCallback) => MaybePromise<Unwatch>;
+  eventEmitter?: EventEmitter,
+  client?: any
 }
 
 export interface Storage {
@@ -103,4 +105,5 @@ export interface Storage {
     options?: { parents?: boolean }
   ) => { base: string; driver: Driver }[];
   eventEmitter:EventEmitter,
+  client?: any
 }

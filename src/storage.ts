@@ -26,7 +26,8 @@ export interface CreateStorageOptions {
 }
 
 export function createStorage(options: CreateStorageOptions = {}): Storage {
-  const eventEmitter = new EventEmitter();
+  const eventEmitter = options.driver?.eventEmitter ?? new EventEmitter();
+  const client = options.driver?.client;
 
   const context: StorageCTX = {
     mounts: { "": options.driver || memory() },
@@ -119,12 +120,17 @@ export function createStorage(options: CreateStorageOptions = {}): Storage {
       }
 
     },
-    getItem(key, opts = {}) {
+    async getItem(key, opts = {}): Promise<any> {
       key = normalizeKey(key);
       const { relativeKey, driver } = getMount(key);
-      return asyncCall(driver.getItem, relativeKey, opts).then((value) =>
-        destr(value)
-      );
+      try {
+        const val = await asyncCall(driver.getItem, relativeKey, opts);
+        destr(val);
+        return val;
+      } catch (e) {
+        eventEmitter.emit('error',e)
+        return undefined;
+      }
     },
     getItemRaw(key, opts = {}) {
       key = normalizeKey(key);
@@ -347,6 +353,7 @@ export function createStorage(options: CreateStorageOptions = {}): Storage {
       }));
     },
     eventEmitter,
+    client,
   };
 
   return storage;
