@@ -55,8 +55,6 @@ export default defineDriver((opts: RedisOptions = {}) => {
   const d = (key: string) => (base ? key.replace(base, "") : key); // Deprefix a key
 
   function exposeConnectionEvents() {
-    // TODO: Consider adding a layer prefix to event i.e: redis:connecting, redis:connection-error, redis:connection-closed
-    // TODO: Consider exposing a REDIS_EVENTS const
     const eventEmitter = new EventEmitter();
     // Connecting
     redisClient?.on('connect', (e) => eventEmitter.emit('connect', e));
