@@ -23,3 +23,9 @@ jobs:
       - run: pnpm build
       - run: pnpm vitest --coverage
       - uses: codecov/codecov-action@v3
+      - uses: actions/upload-artifact@v3
+        with:
+          name: dist-files
+          path: |
+            dist/
+            drivers/
