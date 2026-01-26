@@ -1,74 +1,103 @@
-import { afterAll, beforeAll, describe } from "vitest";
-import driver, { KVHTTPOptions } from "../../src/drivers/cloudflare-kv-http";
+import { afterAll, beforeAll, describe, vi } from "vitest";
 import { testDriver } from "./utils";
-import { rest } from "msw";
-import { setupServer } from "msw/node";
 
-const baseURL =
-  "https://api.cloudflare.com/client/v4/accounts/:accountId/storage/kv/namespaces/:namespaceId";
+// Shared store that will be used by the mock
+const store: Record<string, string> = {};
 
-const store: Record<string, any> = {};
+// Mock ofetch module - define everything inline
+vi.mock("ofetch", () => {
+  const handleFetch = async (url: string, options?: any) => {
+    // Access the store from the outer scope via closure
+    const testStore = (globalThis as any).__cfTestStore || {};
 
-const server = setupServer(
-  rest.get(`${baseURL}/values/:key`, (req, res, ctx) => {
-    const key = req.params.key as string;
-    if (!(key in store)) {
-      return res(ctx.status(404), ctx.json(null));
+    const path = url;
+
+    // GET /values/:key - get item (returns Response-like object with .text())
+    if (options?.method === undefined || options?.method === "GET") {
+      const valueMatch = path.match(/^\/values\/(.+)$/);
+      if (valueMatch) {
+        const key = valueMatch[1];
+        if (!(key in testStore)) {
+          const error: any = new Error("Not found");
+          error.status = 404;
+          error.statusCode = 404;
+          error.response = { status: 404 };
+          throw error;
+        }
+        // Return Response-like object with text() method
+        return {
+          text: () => Promise.resolve(testStore[key]),
+          arrayBuffer: () =>
+            Promise.resolve(new TextEncoder().encode(testStore[key]).buffer),
+        };
+      }
+
+      // GET /metadata/:key - check if exists
+      const metaMatch = path.match(/^\/metadata\/(.+)$/);
+      if (metaMatch) {
+        const key = metaMatch[1];
+        return { success: key in testStore };
+      }
+
+      // GET /keys - list keys
+      if (path.startsWith("/keys")) {
+        const params = options?.params || {};
+        const prefix = params.prefix || "";
+        let keys = Object.keys(testStore);
+        if (prefix) {
+          keys = keys.filter((key) => key.startsWith(prefix));
+        }
+        return {
+          result: keys.map((key) => ({ name: key })),
+          success: true,
+          errors: [],
+          messages: [],
+          result_info: { count: keys.length, cursor: "" },
+        };
+      }
     }
-    return res(
-      ctx.status(200),
-      ctx.set("content-type", "application/octet-stream"),
-      ctx.body(store[key])
-    );
-  }),
 
-  rest.get(`${baseURL}/metadata/:key`, (req, res, ctx) => {
-    const key = req.params.key as string;
-    if (!(key in store)) {
-      return res(ctx.status(404), ctx.json({ success: false }));
+    // PUT /values/:key - set item
+    if (options?.method === "PUT") {
+      const valueMatch = path.match(/^\/values\/(.+)$/);
+      if (valueMatch) {
+        const key = valueMatch[1];
+        testStore[key] =
+          typeof options.body === "string"
+            ? options.body
+            : JSON.stringify(options.body);
+        return null;
+      }
     }
-    return res(ctx.status(200), ctx.json({ success: true }));
-  }),
 
-  rest.put(`${baseURL}/values/:key`, async (req, res, ctx) => {
-    const key = req.params.key as string;
-    store[key] = await req.text();
-    return res(ctx.status(204), ctx.json(null));
-  }),
+    // DELETE /values/:key - remove item
+    if (options?.method === "DELETE") {
+      const valueMatch = path.match(/^\/values\/(.+)$/);
+      if (valueMatch) {
+        const key = valueMatch[1];
+        delete testStore[key];
+        return null;
+      }
 
-  rest.delete(`${baseURL}/values/:key`, (req, res, ctx) => {
-    const key = req.params.key as string;
-    delete store[key];
-    return res(ctx.status(204));
-  }),
-
-  rest.get(`${baseURL}/keys`, (req, res, ctx) => {
-    const prefix = req.url.searchParams.get("prefix") || "";
-    let keys = Object.keys(store);
-    if (req.url.searchParams.has("prefix")) {
-      keys = keys.filter((key) => key.startsWith(prefix));
+      // DELETE /bulk - clear all
+      if (path === "/bulk") {
+        Object.keys(testStore).forEach((key) => delete testStore[key]);
+        return null;
+      }
     }
-    const result = keys.map((key) => ({ name: key }));
 
-    const data = {
-      result,
-      success: true,
-      errors: [],
-      messages: [],
-      result_info: {
-        count: keys.length,
-        cursor: "",
-      },
-    };
+    throw new Error(`Unhandled request: ${options?.method || "GET"} ${path}`);
+  };
 
-    return res(ctx.status(200), ctx.json(data));
-  }),
+  const mockFetch = Object.assign(handleFetch, {
+    create: () => mockFetch,
+  });
 
-  rest.delete(`${baseURL}/bulk`, (_req, res, ctx) => {
-    Object.keys(store).forEach((key) => delete store[key]);
-    return res(ctx.status(204));
-  })
-);
+  return { $fetch: mockFetch };
+});
+
+// Import driver after mock is set up
+import driver, { KVHTTPOptions } from "../../src/drivers/cloudflare-kv-http";
 
 const mockOptions: KVHTTPOptions = {
   apiToken: "api-token",
@@ -78,13 +107,14 @@ const mockOptions: KVHTTPOptions = {
 
 describe("drivers: cloudflare-kv-http", () => {
   beforeAll(() => {
-    // Establish requests interception layer before all tests.
-    server.listen();
+    // Set up the global store reference
+    (globalThis as any).__cfTestStore = store;
   });
+
   afterAll(() => {
-    // Clean up after all tests are done, preventing this
-    // interception layer from affecting irrelevant tests.
-    server.close();
+    vi.clearAllMocks();
+    // Clear store after all tests
+    Object.keys(store).forEach((key) => delete store[key]);
   });
 
   testDriver({
