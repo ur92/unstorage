@@ -12,9 +12,9 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: corepack enable
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: "pnpm"
@@ -22,8 +22,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm build
       - run: pnpm vitest --coverage
-      - uses: codecov/codecov-action@v3
-      - uses: actions/upload-artifact@v3
+      - uses: codecov/codecov-action@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: dist-files
           path: |
