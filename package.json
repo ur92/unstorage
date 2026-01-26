@@ -1,6 +1,6 @@
 {
   "name": "unstorage",
-  "version": "2.9.1",
+  "version": "2.9.1-beta1",
   "type": "module",
   "description": "Universal Storage Layer",
   "repository": "unjs/unstorage",
