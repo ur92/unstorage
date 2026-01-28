@@ -330,7 +330,7 @@ export function createStorage(options: CreateStorageOptions = {}): Storage {
         base: m.mountpoint,
       }));
     },
-    client
+    client,
   };
 
   return storage;

@@ -1,4 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { webcrypto } from "node:crypto";
+// Polyfill crypto for Azure SDK compatibility (needed for @typespec/ts-http-runtime)
+if (!globalThis.crypto?.randomUUID) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: webcrypto,
+    writable: true,
+    configurable: true,
+  });
+}
+
 import driver from "../../src/drivers/azure-storage-table";
 import { testDriver } from "./utils";
 import { TableClient } from "@azure/data-tables";
