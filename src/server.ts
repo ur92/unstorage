@@ -3,7 +3,6 @@ import {
   createApp,
   createError,
   isError,
-  readBody,
   eventHandler,
   toNodeListener,
   getMethod,
@@ -107,7 +106,7 @@ export function createH3StorageHandler(
         const value = await readRawBody(event);
         await storage.setItemRaw(key, value);
       } else {
-        const value = await readBody(event);
+        const value = await readRawBody(event, "utf8");
         await storage.setItem(key, value);
       }
       return "OK";
