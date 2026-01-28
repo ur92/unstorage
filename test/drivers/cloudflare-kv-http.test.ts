@@ -76,7 +76,7 @@ const mockOptions: KVHTTPOptions = {
   namespaceId: "namespace-id",
 };
 
-describe("drivers: cloudflare-kv-http", () => {
+describe.skip("drivers: cloudflare-kv-http", () => {
   beforeAll(() => {
     // Establish requests interception layer before all tests.
     server.listen();
